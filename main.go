@@ -16,42 +16,47 @@ type Cmd struct {
 	Action func(string)
 }
 
-var Cmds []Cmd
-
 func main() {
 	bing := bing.NewBing()
-	bing.Init()
 
+	var Cmds []Cmd
+	Cmds = append(Cmds, Cmd{
+		"day",
+		"每天更新壁纸",
+		func(params string) {
+			bing.Day()
+		},
+	})
 	Cmds = append(Cmds, Cmd{
 		"now",
-		"当天壁纸",
+		"设置当天壁纸",
 		func(params string) {
 			bing.Now()
 		},
 	})
 	Cmds = append(Cmds, Cmd{
 		"prev",
-		"前一天壁纸",
+		"设置前一天壁纸",
 		func(params string) {
 			bing.Prev()
 		},
 	})
 	Cmds = append(Cmds, Cmd{
 		"next",
-		"后一天壁纸",
+		"设置后一天壁纸",
 		func(params string) {
 			bing.Next()
 		},
 	})
 	Cmds = append(Cmds, Cmd{
-		"interval",
-		"间隔时间切换(5m：5分钟)",
+		"rand",
+		"间隔随机切换壁纸（如每分钟切换壁纸：rand 1m）",
 		func(params string) {
 			d, err := time.ParseDuration(params)
 			if err != nil {
 				log.Println(err)
 			} else {
-				bing.Interval(d)
+				bing.Rand(d)
 			}
 		},
 	})
@@ -63,9 +68,9 @@ func main() {
 		},
 	})
 
-	fmt.Println("please input command, usage:")
+	fmt.Println("设置微软必应的壁纸，用法如下：")
 	for _, cmd := range Cmds {
-		fmt.Println(cmd.Name, "-", cmd.Desc)
+		fmt.Println(cmd.Name, "\t-", cmd.Desc)
 	}
 
 	for {
