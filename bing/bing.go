@@ -192,21 +192,21 @@ func(p *Bing)Now() {
 }
 
 func(p *Bing)Prev() {
-	if p.CurrentWallpaperTime.IsZero() {
-		p.CurrentWallpaperTime = time.Now()
-	}
-	prevTime := p.CurrentWallpaperTime.Add(-1 * 24 * time.Hour)
 	p.RunTask(0, func() {
+		if p.CurrentWallpaperTime.IsZero() {
+			p.CurrentWallpaperTime = time.Now()
+		}
+		prevTime := p.CurrentWallpaperTime.Add(-1 * 24 * time.Hour)
 		p.SetWallpaper(util.FormatDate(prevTime))
 	})
 }
 
 func(p *Bing)Next() {
-	if p.CurrentWallpaperTime.IsZero() {
-		p.CurrentWallpaperTime = time.Now()
-	}
-	nextTime := p.CurrentWallpaperTime.Add(24 * time.Hour)
-	p.RunTask(0,func() {
+	p.RunTask(0, func() {
+		if p.CurrentWallpaperTime.IsZero() {
+			p.CurrentWallpaperTime = time.Now()
+		}
+		nextTime := p.CurrentWallpaperTime.Add(24 * time.Hour)
 		p.SetWallpaper(util.FormatDate(nextTime))
 	})
 }
