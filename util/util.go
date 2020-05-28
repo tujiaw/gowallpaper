@@ -1,13 +1,14 @@
 package util
 
 import (
+	"golang.org/x/image/bmp"
+	"image/jpeg"
 	"os"
 	"time"
 )
 
 const (
-	DATE_FORMAT = "2006-01-02"
-	TIME_FORMAT = "2006-01-02 15:04:05"
+	DateFormat  = "2006-01-02"
 )
 
 func PathExist(path string) bool {
@@ -22,13 +23,36 @@ func PathExist(path string) bool {
 }
 
 func CurrentDate() string {
-	return time.Now().Format(DATE_FORMAT)
+	return time.Now().Format(DateFormat)
 }
 
 func FormatDate(t time.Time)string {
-	return t.Format(DATE_FORMAT)
+	return t.Format(DateFormat)
 }
 
 func FromDate(strTime string)(time.Time, error)   {
-	return time.ParseInLocation(DATE_FORMAT, strTime, time.Local)
+	return time.ParseInLocation(DateFormat, strTime, time.Local)
+}
+
+func Jpg2Bmp(from string, to string) error {
+	imageInput, err := os.Open(from)
+	if err != nil {
+		return err
+	}
+	defer imageInput.Close()
+	src, err := jpeg.Decode(imageInput)
+	if err != nil {
+		return err
+	}
+
+	outfile, err := os.Create(to)
+	if err != nil {
+		return err
+	}
+	defer outfile.Close()
+	err = bmp.Encode(outfile, src)
+	if err != nil {
+		return err
+	}
+	return nil
 }

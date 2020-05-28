@@ -7,11 +7,11 @@ import (
 )
 
 var ApiList = map[string][]string {
-	"user32.dll": []string {
+	"user32.dll": {
 		"MessageBoxW",
 		"SystemParametersInfoW",
 	},
-	"kernel32.dll": []string {
+	"kernel32.dll": {
 
 	},
 }
@@ -25,14 +25,14 @@ func init() {
 		if err != nil {
 			panic(err)
 		}
-		defer syscall.FreeLibrary(d.Handle)
 		for _, name := range apiList {
 			api, err := d.FindProc(name)
 			if err != nil {
-				panic(err)
+				log.Println(err, name)
 			}
 			ProcCache[name] = api
 		}
+		_ = syscall.FreeLibrary(d.Handle)
 	}
 }
 

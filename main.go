@@ -17,35 +17,35 @@ type Cmd struct {
 }
 
 func main() {
-	bing := bing.NewBing()
+	newBing := bing.NewBing()
 
 	var Cmds []Cmd
 	Cmds = append(Cmds, Cmd{
 		"day",
 		"每天更新壁纸",
 		func(params string) {
-			bing.Day()
+			newBing.Day()
 		},
 	})
 	Cmds = append(Cmds, Cmd{
 		"now",
 		"设置当天壁纸",
 		func(params string) {
-			bing.Now()
+			newBing.Now()
 		},
 	})
 	Cmds = append(Cmds, Cmd{
 		"prev",
 		"设置前一天壁纸",
 		func(params string) {
-			bing.Prev()
+			newBing.Prev()
 		},
 	})
 	Cmds = append(Cmds, Cmd{
 		"next",
 		"设置后一天壁纸",
 		func(params string) {
-			bing.Next()
+			newBing.Next()
 		},
 	})
 	Cmds = append(Cmds, Cmd{
@@ -56,7 +56,7 @@ func main() {
 			if err != nil {
 				log.Println(err)
 			} else {
-				bing.Rand(d)
+				newBing.Rand(d)
 			}
 		},
 	})
@@ -88,7 +88,7 @@ func main() {
 			params = strList[1]
 		}
 
-		if (cmd == "quit" || cmd == "exit") {
+		if cmd == "quit" || cmd == "exit" {
 			os.Exit(0)
 			return
 		}

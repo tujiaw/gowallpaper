@@ -3,11 +3,8 @@ package bing
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
-	"golang.org/x/image/bmp"
 	"gowallpaper/util"
 	"gowallpaper/winapi"
-	"image/jpeg"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -19,7 +16,7 @@ import (
 	"time"
 )
 
-type BingWallpaper struct {
+type Wallpaper struct {
 	Date string `json:"date"`
 	Title string `json:"title"`
 	Url   string `json:"url"`
@@ -30,7 +27,7 @@ type Bing struct {
 	Dir      string
 	JsonPath string
 	BmpTempPath string
-	WallpaperList []BingWallpaper
+	WallpaperList []Wallpaper
 	CurrentWallpaperTime time.Time
 	ticker *time.Ticker
 }
@@ -47,11 +44,20 @@ func GetImageName(imageUrl string) (string, error) {
 	return "", errors.New("name not found")
 }
 
+func FindWallpaper(list []Wallpaper, date string)(Wallpaper, error) {
+	for _, v := range list {
+		if v.Date == date {
+			return v, nil
+		}
+	}
+	return Wallpaper{}, errors.New("not found")
+}
+
 func NewBing() *Bing {
 	p := new(Bing)
 	p.Url = "https://www.ningto.com/public/bing/his.json"
-	p.Dir = path.Join(os.TempDir(), "gowallpaper")
-	os.MkdirAll(p.Dir, os.ModePerm)
+	p.Dir = path.Join(os.TempDir(), "go_wallpaper")
+	_ = os.MkdirAll(p.Dir, os.ModePerm)
 	p.JsonPath = path.Join(p.Dir, "his.json")
 	p.BmpTempPath = path.Join(p.Dir, "tmp.bmp")
 	log.Println("tmp dir:", p.Dir)
@@ -81,6 +87,7 @@ func(p *Bing)Init() error {
 }
 
 func(p *Bing)FetchAndWrite(url string, localFilePath string)error {
+	log.Println("fetch", url)
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
@@ -98,64 +105,48 @@ func(p *Bing)FetchAndWrite(url string, localFilePath string)error {
 	return nil
 }
 
-func(p *Bing)Jpg2Bmp(from string, to string) error {
-	imageinput, err := os.Open(from)
-	if err != nil {
-		return err
-	}
-	defer imageinput.Close()
-	src, err := jpeg.Decode(imageinput)
-	if err != nil {
-		return err
-	}
-
-	outfile, err := os.Create(to)
-	if err != nil {
-		return err
-	}
-	defer outfile.Close()
-	err = bmp.Encode(outfile, src)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func(p *Bing)SetWallpaper(date string)error {
+func(p *Bing)SetWallpaper(date string) {
 	if len(p.WallpaperList) == 0 {
-		return errors.New("wallpaper list is empty")
+		log.Println("wallpaper list is empty")
+		return
 	}
 
 	if p.WallpaperList[0].Date != util.CurrentDate() {
 		if err := os.Remove(p.JsonPath); err != nil {
-			return err
+			log.Println(err)
 		}
-		p.Init()
+		if err := p.Init(); err != nil {
+			log.Println(err)
+		}
 	}
 
-	for _, v := range p.WallpaperList {
-		if v.Date == date {
-			name, err := GetImageName(v.Url)
-			if err != nil {
-				return err
-			}
-			jpgPath := path.Join(p.Dir, name)
-			bmpPath := p.BmpTempPath
-			if !util.PathExist(jpgPath) {
-				if err = p.FetchAndWrite(v.Url, jpgPath); err != nil {
-					return err
-				}
-			}
-			if err = p.Jpg2Bmp(jpgPath, bmpPath); err != nil {
-				return err
-			}
-			log.Println(v.Title, v.Date)
-			winapi.SetWallpaper(bmpPath)
-			p.CurrentWallpaperTime, _ = util.FromDate(date)
-			return nil
+	v, err := FindWallpaper(p.WallpaperList, date)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	name, err := GetImageName(v.Url)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	jpgPath := path.Join(p.Dir, name)
+	bmpPath := p.BmpTempPath
+	if !util.PathExist(jpgPath) {
+		if err = p.FetchAndWrite(v.Url, jpgPath); err != nil {
+			log.Println(err)
+			return
 		}
 	}
-	return errors.New(fmt.Sprintf("date not found, %s", date))
+	if err = util.Jpg2Bmp(jpgPath, bmpPath); err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println(v.Title, v.Date)
+	winapi.SetWallpaper(bmpPath)
+	p.CurrentWallpaperTime, _ = util.FromDate(date)
 }
 
 func(p *Bing)RunTask(d time.Duration, f func()) {
@@ -171,7 +162,7 @@ func(p *Bing)RunTask(d time.Duration, f func()) {
 
 	p.ticker = time.NewTicker(d)
 	go func() {
-		for _ = range p.ticker.C {
+		for range p.ticker.C {
 			f()
 		}
 	}()
