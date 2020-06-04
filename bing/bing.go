@@ -3,6 +3,7 @@ package bing
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"gowallpaper/util"
 	"gowallpaper/winapi"
 	"io/ioutil"
@@ -12,22 +13,19 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"sort"
 	"time"
 )
 
 type Wallpaper struct {
-	Date string `json:"date"`
 	Title string `json:"title"`
-	Url   string `json:"url"`
+	Author string `json:"author"`
+	Url string `json:"url"`
+	Date string `json:"date"`
 }
 
 type Bing struct {
-	Url      string
 	Dir      string
-	JsonPath string
 	BmpTempPath string
-	WallpaperList []Wallpaper
 	CurrentWallpaperTime time.Time
 	ticker *time.Ticker
 }
@@ -44,46 +42,38 @@ func GetImageName(imageUrl string) (string, error) {
 	return "", errors.New("name not found")
 }
 
-func FindWallpaper(list []Wallpaper, date string)(Wallpaper, error) {
-	for _, v := range list {
-		if v.Date == date {
-			return v, nil
-		}
-	}
-	return Wallpaper{}, errors.New("not found")
-}
-
 func NewBing() *Bing {
 	p := new(Bing)
-	p.Url = "https://www.ningto.com/public/bing/his.json"
 	p.Dir = path.Join(os.TempDir(), "go_wallpaper")
 	_ = os.MkdirAll(p.Dir, os.ModePerm)
-	p.JsonPath = path.Join(p.Dir, "his.json")
 	p.BmpTempPath = path.Join(p.Dir, "tmp.bmp")
 	log.Println("tmp dir:", p.Dir)
-	if err := p.Init(); err != nil {
-		panic(err)
-	}
 	return p
 }
 
-func(p *Bing)Init() error {
-	if !util.PathExist(p.JsonPath) {
-		if err := p.FetchAndWrite(p.Url, p.JsonPath); err != nil {
-			return err
-		}
+func(p *Bing)GetUrl(date time.Time) string {
+	host := "https://www.ningto.com/api/bingdate"
+	if date.Unix() > time.Now().Unix(){
+		return host
 	}
-	b, err := ioutil.ReadFile(p.JsonPath)
+	return fmt.Sprintf("%s?date=%s", host, util.FormatDate(date))
+}
+
+func(p *Bing)GetWallpaper(date time.Time)(Wallpaper, error) {
+	url := p.GetUrl(date)
+	resp, err := http.Get(url)
 	if err != nil {
-		return err
+		return Wallpaper{}, err
 	}
-	if err := json.Unmarshal(b, &p.WallpaperList); err != nil {
-		return err
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return Wallpaper{}, err
 	}
-	sort.Slice(p.WallpaperList, func(i, j int)bool {
-		return p.WallpaperList[i].Date > p.WallpaperList[j].Date
-	})
-	return nil
+
+	var wallpaper Wallpaper
+	err = json.Unmarshal(b, &wallpaper)
+	return wallpaper, err
 }
 
 func(p *Bing)FetchAndWrite(url string, localFilePath string)error {
@@ -105,28 +95,14 @@ func(p *Bing)FetchAndWrite(url string, localFilePath string)error {
 	return nil
 }
 
-func(p *Bing)SetWallpaper(date string) {
-	if len(p.WallpaperList) == 0 {
-		log.Println("wallpaper list is empty")
-		return
-	}
-
-	if p.WallpaperList[0].Date != util.CurrentDate() {
-		if err := os.Remove(p.JsonPath); err != nil {
-			log.Println(err)
-		}
-		if err := p.Init(); err != nil {
-			log.Println(err)
-		}
-	}
-
-	v, err := FindWallpaper(p.WallpaperList, date)
+func(p *Bing)SetWallpaper(date time.Time) {
+	wallpaper, err := p.GetWallpaper(date)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	name, err := GetImageName(v.Url)
+	name, err := GetImageName(wallpaper.Url)
 	if err != nil {
 		log.Println(err)
 		return
@@ -135,7 +111,7 @@ func(p *Bing)SetWallpaper(date string) {
 	jpgPath := path.Join(p.Dir, name)
 	bmpPath := p.BmpTempPath
 	if !util.PathExist(jpgPath) {
-		if err = p.FetchAndWrite(v.Url, jpgPath); err != nil {
+		if err = p.FetchAndWrite(wallpaper.Url, jpgPath); err != nil {
 			log.Println(err)
 			return
 		}
@@ -144,9 +120,9 @@ func(p *Bing)SetWallpaper(date string) {
 		log.Println(err)
 		return
 	}
-	log.Println(v.Title, v.Date)
+	log.Println(wallpaper.Title, wallpaper.Date)
 	winapi.SetWallpaper(bmpPath)
-	p.CurrentWallpaperTime, _ = util.FromDate(date)
+	p.CurrentWallpaperTime = date
 }
 
 func(p *Bing)RunTask(d time.Duration, f func()) {
@@ -171,14 +147,14 @@ func(p *Bing)RunTask(d time.Duration, f func()) {
 func(p *Bing)Day() {
 	p.RunTask(1 * time.Hour, func() {
 		if time.Now().Day() != p.CurrentWallpaperTime.Day() {
-			p.SetWallpaper(util.FormatDate(time.Now()))
+			p.SetWallpaper(time.Now())
 		}
 	})
 }
 
 func(p *Bing)Now() {
 	p.RunTask(0, func() {
-		p.SetWallpaper(util.FormatDate(time.Now()))
+		p.SetWallpaper(time.Now())
 	})
 }
 
@@ -188,7 +164,7 @@ func(p *Bing)Prev() {
 			p.CurrentWallpaperTime = time.Now()
 		}
 		prevTime := p.CurrentWallpaperTime.Add(-1 * 24 * time.Hour)
-		p.SetWallpaper(util.FormatDate(prevTime))
+		p.SetWallpaper(prevTime)
 	})
 }
 
@@ -198,15 +174,17 @@ func(p *Bing)Next() {
 			p.CurrentWallpaperTime = time.Now()
 		}
 		nextTime := p.CurrentWallpaperTime.Add(24 * time.Hour)
-		p.SetWallpaper(util.FormatDate(nextTime))
+		p.SetWallpaper(nextTime)
 	})
 }
 
 func(p *Bing)Rand(d time.Duration) {
 	p.RunTask(d, func() {
-		n := rand.Intn(len(p.WallpaperList))
-		if n >= 0 && n < len(p.WallpaperList) {
-			p.SetWallpaper(p.WallpaperList[n].Date)
+		n := rand.Intn(100)
+		cur := time.Now()
+		for i := 0; i < n; i++ {
+			cur = cur.Add(-24 * time.Hour)
 		}
+		p.SetWallpaper(cur)
 	})
 }
