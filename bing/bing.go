@@ -27,7 +27,7 @@ type Bing struct {
 	Dir                  string
 	BmpTempPath          string
 	CurrentWallpaperTime time.Time
-	ticker               *time.Ticker
+	timer                *util.IntervalTimer
 }
 
 func GetImageName(imageUrl string) (string, error) {
@@ -47,7 +47,8 @@ func NewBing() *Bing {
 	p.Dir = path.Join(os.TempDir(), "go_wallpaper")
 	_ = os.MkdirAll(p.Dir, os.ModePerm)
 	p.BmpTempPath = path.Join(p.Dir, "tmp.bmp")
-	log.Println("tmp dir:", p.Dir)
+	log.Println("================================")
+	fmt.Println("壁纸缓存目录:", p.Dir)
 	return p
 }
 
@@ -127,9 +128,9 @@ func (p *Bing) SetWallpaper(date time.Time) {
 }
 
 func (p *Bing) RunTask(d time.Duration, f func()) {
-	if p.ticker != nil {
-		p.ticker.Stop()
-		p.ticker = nil
+	if p.timer != nil {
+		p.timer.Stop()
+		p.timer = nil
 	}
 
 	if d.Seconds() == 0 {
@@ -137,12 +138,8 @@ func (p *Bing) RunTask(d time.Duration, f func()) {
 		return
 	}
 
-	p.ticker = time.NewTicker(d)
-	go func() {
-		for range p.ticker.C {
-			f()
-		}
-	}()
+	p.timer = util.NewIntervalTimer(d, f)
+	p.timer.Start()
 }
 
 func (p *Bing) Day() {

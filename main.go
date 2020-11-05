@@ -68,7 +68,7 @@ func main() {
 		},
 	})
 
-	fmt.Println("设置微软必应的壁纸，用法如下：")
+	fmt.Println("设置微软必应壁纸，输入如下命令：")
 	for _, cmd := range Cmds {
 		fmt.Println(cmd.Name, "\t-", cmd.Desc)
 	}
