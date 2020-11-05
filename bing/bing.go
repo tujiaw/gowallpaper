@@ -47,6 +47,7 @@ func NewBing() *Bing {
 	p.Dir = path.Join(os.TempDir(), "go_wallpaper")
 	_ = os.MkdirAll(p.Dir, os.ModePerm)
 	p.BmpTempPath = path.Join(p.Dir, "tmp.bmp")
+	p.timer = util.NewIntervalTimer(0, func() {})
 	log.Println("================================")
 	fmt.Println("壁纸缓存目录:", p.Dir)
 	return p
@@ -128,18 +129,13 @@ func (p *Bing) SetWallpaper(date time.Time) {
 }
 
 func (p *Bing) RunTask(d time.Duration, f func()) {
-	if p.timer != nil {
-		p.timer.Stop()
-		p.timer = nil
-	}
-
+	p.timer.Stop()
+	p.timer = util.NewIntervalTimer(d, f)
 	if d.Seconds() == 0 {
 		f()
-		return
+	} else {
+		p.timer.Start()
 	}
-
-	p.timer = util.NewIntervalTimer(d, f)
-	p.timer.Start()
 }
 
 func (p *Bing) Day() {

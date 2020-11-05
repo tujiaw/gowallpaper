@@ -12,10 +12,7 @@ type IntervalTimer struct {
 }
 
 func NewIntervalTimer(d time.Duration, fn func()) *IntervalTimer {
-	ticker := &IntervalTimer{}
-	ticker.d = d
-	ticker.fn = fn
-	return ticker
+	return &IntervalTimer{d: d, fn: fn}
 }
 
 func (t *IntervalTimer) Start() {
