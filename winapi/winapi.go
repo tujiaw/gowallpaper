@@ -2,18 +2,17 @@ package winapi
 
 import (
 	"log"
+	"strings"
 	"syscall"
 	"unsafe"
 )
 
-var ApiList = map[string][]string {
+var ApiList = map[string][]string{
 	"user32.dll": {
 		"MessageBoxW",
 		"SystemParametersInfoW",
 	},
-	"kernel32.dll": {
-
-	},
+	"kernel32.dll": {},
 }
 
 var ProcCache map[string]*syscall.Proc
@@ -28,7 +27,7 @@ func init() {
 		for _, name := range apiList {
 			api, err := d.FindProc(name)
 			if err != nil {
-				log.Println(err, name)
+				log.Println(name, err)
 			}
 			ProcCache[name] = api
 		}
@@ -39,8 +38,8 @@ func init() {
 func WinCall(name string, a ...uintptr) {
 	if api, ok := ProcCache[name]; ok {
 		_, _, err := api.Call(a...)
-		if err != nil {
-			log.Println(err)
+		if err != nil && !strings.Contains(err.Error(), "timeout period expired") {
+			log.Println("api.Call", err)
 		}
 	} else {
 		log.Println("api not found, name:", name)

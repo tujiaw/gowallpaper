@@ -11,8 +11,8 @@ import (
 )
 
 type Cmd struct {
-	Name string
-	Desc string
+	Name   string
+	Desc   string
 	Action func(string)
 }
 
@@ -54,7 +54,7 @@ func main() {
 		func(params string) {
 			d, err := time.ParseDuration(params)
 			if err != nil {
-				log.Println(err)
+				log.Println("time.ParseDuration", err)
 			} else {
 				newBing.Rand(d)
 			}
@@ -102,7 +102,7 @@ func main() {
 	}
 }
 
-func ReadLine()string {
+func ReadLine() string {
 	reader := bufio.NewReader(os.Stdin)
 	data, _, _ := reader.ReadLine()
 	return string(data)
